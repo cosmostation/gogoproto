@@ -732,6 +732,30 @@ func (m *Marshaler) marshalValue(out *errWriter, prop *proto.Properties, v refle
 			return out.err
 		}
 	}
+	// RawContractMessage Interfaces in wasmd
+	type checkForRawContractMessage interface {
+		MarshalJSON() ([]byte, error)
+		Bytes() []byte
+	}
+
+	// check MarshalJSON() and Bytes() for checking RawContractMessage type in wasmd
+	if m, ok := v.Interface().(checkForRawContractMessage); ok {
+		if json.Valid(m.Bytes()) {
+			data, err := m.MarshalJSON()
+			if err != nil {
+				return err
+			}
+
+			out.write(string(data))
+			return nil
+		} else {
+			invalidData := fmt.Sprintf(`"%s"`, m.Bytes())
+			fmt.Printf(">>>>>>>> found invalid data: %s\n", invalidData)
+
+			out.write(string(invalidData))
+			return nil
+		}
+	}
 
 	// Default handling defers to the encoding/json library.
 	b, err := json.Marshal(v.Interface())
